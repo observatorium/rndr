@@ -1,37 +1,50 @@
-package main
+package rndr
 
-type Template struct {
-	Version string
+import (
+	"gopkg.in/yaml.v3"
+)
+
+type TemplateDefinition struct {
+	Version  string
 	Template string
-	Authors string
+	Authors  string
 
 	// API is an input definition that will be used to validate template input YAML against and generate
 	// Custom Resource Definitions for Kubernetes.
 	// It's recommended to define your definitions.
 	// Otherwise if empty, no validation will be in place as well as rndr will fail when Kubernetes operator is requested.
-	API TemplateInputDefinition
+	API TemplateAPI
 
 	// Renderer is a mandatory expanding engine that converts input to desired deployment resources (e.g as Kuberentes YAMLs)
 	Renderer TemplateRenderer
 
 	// Tells rndr and renderer where generated resources should land.
-	Output Output
+	Output TemplateOutput
 }
 
-type TemplateInputDefinition struct {
+// ParseTemplate parses TemplateDefinition from bytes.
+func ParseTemplate(b []byte) (TemplateDefinition, error) {
+	t := TemplateDefinition{}
+	if err := yaml.Unmarshal(b, &t); err != nil {
+		return TemplateDefinition{}, err
+	}
+	return t, nil
+}
+
+type TemplateAPI struct {
 	// One of.
-	Go GoTemplateInputDefinition
-	Proto ProtoTemplateInputDefinition
+	Go    GoTemplateAPI
+	Proto ProtoTemplateAPI
 }
 
-type GoTemplateInputDefinition struct {
-	Entry string
+type GoTemplateAPI struct {
+	Entry   string
 	Package string
 }
 
-type ProtoTemplateInputDefinition struct {
+type ProtoTemplateAPI struct {
 	Entry string
-	File string
+	File  string
 }
 
 // TODO(bwplotka): Allow building all into Go binary? What if files are too large to be part of binary?
@@ -45,7 +58,7 @@ type TemplateRenderer struct {
 	Process ProcessTemplateRenderer
 }
 
-type Output struct {
+type TemplateOutput struct {
 	// TODO(bwplotka): Allow defining custom, parallel deployment logics?
 	// NOTE: Resources are meant to be deployed in the lexicographic order.
 	Directories []string
@@ -66,7 +79,7 @@ type HelmTemplateRenderer struct {
 }
 
 type ProcessTemplateRenderer struct {
-	Command string
+	Command   string
 	Arguments []string
 	// InputEnvVar controls the name of variable with input YAML content e.g `INPUT`.
 	// If empty template input YAML is passed via stdin.

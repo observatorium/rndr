@@ -6,6 +6,7 @@ GO111MODULE       ?= on
 export GO111MODULE
 
 GOBIN ?= $(firstword $(subst :, ,${GOPATH}))/bin
+TMP_DIR := /tmp/rndr
 
 # Tools.
 GIT ?= $(shell which git)
@@ -67,6 +68,24 @@ test-examples: ## Test examples.
 test-examples: build
 	@$(MAKE) -C "examples/hellosvc" kubernetes
 	@$(MAKE) -C "examples/hellosvc" kubernetes-special
+
+# Tooling for jsonnet examples.
+JSONNET_SRC = $(shell find . -type f -not -path './*vendor/*' \( -name '*.libsonnet' -o -name '*.jsonnet' \))
+EXAMPLE_JSONNET_HELLOSVC_DIR="examples/hellosvc/hellosvc-tmpl-jsonnet"
+
+.PHONY: jsonnet-example
+jsonnet-example: # Generate example service.
+jsonnet-example: $(JB) $(JSONNETFMT) $(JSONNET_LINT) $(GOJSONTOYAML) $(JSONNET)
+	@echo "format all"
+	@$(JSONNETFMT) -n 2 --max-blank-lines 2 --string-style s --comment-style s -i $(JSONNET_SRC)
+	@echo "lint all"
+	@echo ${JSONNET_SRC} | xargs -n 1 -- $(JSONNET_LINT) -J vendor
+	@echo "install deps for $(EXAMPLE_JSONNET_HELLOSVC_DIR)"
+	@cd $(EXAMPLE_JSONNET_HELLOSVC_DIR) && $(JB) install
+	@echo "generate Kubernetes service manually using jsonnet to check if we can for $(EXAMPLE_JSONNET_HELLOSVC_DIR)"
+	@mkdir -p $(TMP_DIR)/$(EXAMPLE_JSONNET_HELLOSVC_DIR)
+	@echo "(import '$(shell pwd)/$(EXAMPLE_JSONNET_HELLOSVC_DIR)/hellosvc.libsonnet')({})" > $(TMP_DIR)/$(EXAMPLE_JSONNET_HELLOSVC_DIR)/main.jsonnet
+	$(JSONNET) -J vendor -m $(TMP_DIR)/$(EXAMPLE_JSONNET_HELLOSVC_DIR) $(TMP_DIR)/$(EXAMPLE_JSONNET_HELLOSVC_DIR)/main.jsonnet | xargs -I{} sh -c 'cat {} | $(GOJSONTOYAML)' -- {}
 
 .PHONY: check-git
 check-git:

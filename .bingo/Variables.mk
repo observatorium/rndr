@@ -65,9 +65,3 @@ $(KUBEVAL): $(BINGO_DIR)/kubeval.mod
 	@echo "(re)installing $(GOBIN)/kubeval-v0.0.0-20201005082916-38668c6c5b23"
 	@cd $(BINGO_DIR) && $(GO) build -mod=mod -modfile=kubeval.mod -o=$(GOBIN)/kubeval-v0.0.0-20201005082916-38668c6c5b23 "github.com/instrumenta/kubeval"
 
-LOCUTUS := $(GOBIN)/locutus-v0.0.0-20210118164634-ff6bf1183da1
-$(LOCUTUS): $(BINGO_DIR)/locutus.mod
-	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
-	@echo "(re)installing $(GOBIN)/locutus-v0.0.0-20210118164634-ff6bf1183da1"
-	@cd $(BINGO_DIR) && $(GO) build -mod=mod -modfile=locutus.mod -o=$(GOBIN)/locutus-v0.0.0-20210118164634-ff6bf1183da1 "github.com/brancz/locutus"
-

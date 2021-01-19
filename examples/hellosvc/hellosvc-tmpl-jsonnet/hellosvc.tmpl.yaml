@@ -5,13 +5,13 @@ authors: "team@example.com"
 # api defines the definition of values.
 api:
   go:
-    entry: "HelloService"
-    package: "github.com/observatorium/rndr/examples/hellosvc/api"
+    default: "github.com/observatorium/rndr/examples/hellosvc/api.Default()"
+    struct: "github.com/observatorium/rndr/examples/hellosvc/api.HelloService"
 
 # renderer defines the rendering engine.
 renderer:
   jsonnet:
-    entry: main.jsonnet
+    entry: hellosvc.libsonnet
 
 # output defines the output files layout.
 output:
