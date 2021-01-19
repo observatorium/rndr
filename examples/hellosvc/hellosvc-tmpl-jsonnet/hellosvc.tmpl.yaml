@@ -1,0 +1,19 @@
+version: v1.0.0
+template: "helloservice"
+authors: "team@example.com"
+
+# api defines the definition of values.
+api:
+  go:
+    entry: "HelloService"
+    package: "github.com/observatorium/rndr/examples/hellosvc/api"
+
+# renderer defines the rendering engine.
+renderer:
+  jsonnet:
+    entry: main.jsonnet
+
+# output defines the output files layout.
+output:
+  directories:
+    - ".tmp-rndr"
