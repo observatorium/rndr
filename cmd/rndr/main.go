@@ -68,13 +68,14 @@ func main() {
 
 	var g run.Group
 
-	k8sCmd := registerKubernetesCommand(app, &g, rc)
-	_ = registerKubernetesOperatorCommand(k8sCmd, &g, rc)
-	_ = registerKubernetesHelmCommand(k8sCmd, &g, rc)
+	k := app.Command("kubernetes", "Generate Kubernetes deployment resources")
+	_ = registerKubernetesManifestsCommand(k, &g, rc)
+	_ = registerKubernetesOperatorCommand(k, &g, rc)
+	_ = registerKubernetesHelmCommand(k, &g, rc)
 
 	cmd, err := app.Parse(os.Args[1:])
 	if err != nil {
-		fmt.Println("error", err)
+		fmt.Println("parse error:", err)
 		os.Exit(1)
 	}
 	rc.logger = setupLogger(*logLevel, *logFormat)

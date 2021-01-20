@@ -34,14 +34,14 @@ For example, you could have `hellosvc.tmpl.yaml` (as you can see how it's used d
 
 ```yaml
 version: v1
-template: "helloservice"
+name: "helloservice"
 authors: "team@example.com"
 
 # api defines the definition of values.
 api:
-  go: 
-    entry: "HelloService"
-    package: "github.com/observatorium/rndr/examples/hellosvc/api"
+  go:
+    default: "github.com/observatorium/rndr/examples/hellosvc/api.Default()"
+    struct: "github.com/observatorium/rndr/examples/hellosvc/api.HelloService"
 #  or
 #  proto:
 #    entry: "Config"
@@ -51,7 +51,7 @@ api:
 # renderer defines the rendering engine.
 renderer:
   jsonnet:
-    entry: main.jsonnet
+    entry: hellosvc.libsonnet
 #  or
 #  helm:
 #    chart: prometheus
@@ -63,10 +63,6 @@ renderer:
 #    arguments:
 #    - "--config=${INPUT}
 
-# output defines the output files layout.
-output:
-  directories:
-    - ".tmp-rndr"
 ```
 
 ### Using your template to render desired deployment state 

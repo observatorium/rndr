@@ -10,8 +10,8 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func registerKubernetesCommand(cmd *kingpin.Application, g *run.Group, rc rndrConfig) *kingpin.CmdClause {
-	c := cmd.Command("kubernetes", "Generate Kubernetes deployment resources")
+func registerKubernetesManifestsCommand(cmd *kingpin.CmdClause, g *run.Group, rc rndrConfig) *kingpin.CmdClause {
+	c := cmd.Command("manifests", "Generate Kubernetes manifests")
 	values := kingpinv2.Flag(c, "values", "Values YAML as defined in passed --template api").Required().PathOrContent()
 
 	c.Action(func(_ *kingpin.ParseContext) error {
@@ -31,7 +31,6 @@ func registerKubernetesCommand(cmd *kingpin.Application, g *run.Group, rc rndrCo
 			if err != nil {
 				return err
 			}
-
 			return rndr.Render(ctx, rc.logger, t, vTmpl, rc.outDir)
 		}, func(err error) {
 			cancel()
@@ -43,6 +42,8 @@ func registerKubernetesCommand(cmd *kingpin.Application, g *run.Group, rc rndrCo
 
 func registerKubernetesOperatorCommand(cmd *kingpin.CmdClause, g *run.Group, rc rndrConfig) *kingpin.CmdClause {
 	c := cmd.Command("operator", "Generate Kubernetes operator")
+
+	// TODO(bwplotka): Allow building all into Go binary? What if files are too large to be part of binary?
 	c.Action(func(_ *kingpin.ParseContext) error {
 		_, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {

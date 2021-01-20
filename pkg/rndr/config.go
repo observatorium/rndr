@@ -1,13 +1,13 @@
 package rndr
 
 import (
+	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
 
 type TemplateDefinition struct {
-	Version  string
-	Template string
-	Authors  string
+	Name    string
+	Authors string
 
 	// API is an input definition that will be used to validate template input YAML against and generate
 	// Custom Resource Definitions for Kubernetes.
@@ -17,56 +17,85 @@ type TemplateDefinition struct {
 
 	// Renderer is a mandatory expanding engine that converts input to desired deployment resources (e.g as Kuberentes YAMLs)
 	Renderer TemplateRenderer
-
-	// Tells rndr and renderer where generated resources should land.
-	Output TemplateOutput
 }
 
 // ParseTemplate parses TemplateDefinition from bytes.
 func ParseTemplate(b []byte) (TemplateDefinition, error) {
 	t := TemplateDefinition{}
 	if err := yaml.Unmarshal(b, &t); err != nil {
-		return TemplateDefinition{}, err
+		return TemplateDefinition{}, errors.Wrapf(err, "parsing template content %q", string(b))
+	}
+
+	if t.Name == "" {
+		return TemplateDefinition{}, errors.New("name not specified, but required")
+	}
+
+	if t.Authors == "" {
+		return TemplateDefinition{}, errors.New("authors not specified, but required")
+	}
+
+	switch {
+	case t.API.Go != nil:
+		if t.API.Go.Struct == "" {
+			return TemplateDefinition{}, errors.New("api.go.struct not specified, but required")
+		}
+	case t.API.Proto != nil:
+		if t.API.Proto.Message == "" {
+			return TemplateDefinition{}, errors.New("api.proto.message not specified, but required")
+		}
+		if t.API.Proto.File == "" {
+			return TemplateDefinition{}, errors.New("api.proto.file not specified, but required")
+		}
+	default:
+		return TemplateDefinition{}, errors.New("template renderer has to be specified, got none")
+	}
+
+	// TODO(bwplotka): Add validation for renderers.
+	switch {
+	case t.Renderer.Jsonnet != nil:
+	case t.Renderer.Helm != nil:
+	case t.Renderer.Process != nil:
+	default:
+		return TemplateDefinition{}, errors.New("template renderer has to be specified, got none")
 	}
 	return t, nil
 }
 
 type TemplateAPI struct {
 	// One of.
-	Go    GoTemplateAPI
-	Proto ProtoTemplateAPI
+	Go    *GoTemplateAPI
+	Proto *ProtoTemplateAPI
 }
 
 type GoTemplateAPI struct {
-	Entry   string
-	Package string
+	// Default is a <full package path>.<public function> to be invoked to get valid struct filled in Entry
+	Default string
+	// Struct is a <full package path>.<public struct> name that should be used as the entry point for API struct.
+	Struct string
 }
 
 type ProtoTemplateAPI struct {
-	Entry string
-	File  string
+	// Message is a name of root proto Message to be assumed as entry point for API in .proto file.
+	Message string
+	// File is destination to .proto file on local filesystem.
+	File string
 }
 
-// TODO(bwplotka): Allow building all into Go binary? What if files are too large to be part of binary?
 type TemplateRenderer struct {
 	// One of.
 	// Jsonnet allows to configure a renderer that is able to take jsonnet entry point file and input in YAMl and render output files.
-	Jsonnet JsonnetTemplateRenderer
+	// `rndr` expects output resources to be rendered in stdout.
+	Jsonnet *JsonnetTemplateRenderer
 	// Helm allows to configure a renderer that is able to take helm chart and input in YAMl and render output files.
-	Helm HelmTemplateRenderer
+	Helm *HelmTemplateRenderer
 	// Process allows to configure a renderer that is able to execute process with YAMl passed by stdin or envvar and render output files.
-	Process ProcessTemplateRenderer
-}
-
-type TemplateOutput struct {
-	// TODO(bwplotka): Allow defining custom, parallel deployment logics?
-	// NOTE: Resources are meant to be deployed in the lexicographic order.
-	Directories []string
+	// `rndr` expects output resources to be rendered in stdout.
+	Process *ProcessTemplateRenderer
 }
 
 type JsonnetTemplateRenderer struct {
-	// entrypoint represents entry .jsonnet file to be executed.
-	entrypoint string
+	// Entry represents entry .jsonnet file to be executed.
+	Entry string
 }
 
 type HelmTemplateRenderer struct {

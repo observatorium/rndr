@@ -1,8 +1,14 @@
 GOBIN ?= $(firstword $(subst :, ,${GOPATH}))/bin
-RNDR =? $(GOBIN)/rndr
+RNDR ?= $(GOBIN)/rndr
 
 kubernetes:
-	@$(RNDR) --template=hellosvc-tmpl-jsonnet/hellosvc.tmpl.yaml kubernetes --values=dont-know-what-to-put-hellosvc.values.yaml -o hellosvc-tmpl-jsonnet/.gen/kubernetes/
+	@mkdir -p hellosvc-tmpl-jsonnet/.gen/kubernetes/
+	@$(RNDR) --template-file="hellosvc-tmpl-jsonnet/hellosvc.tmpl.yaml" kubernetes manifests \
+ 		 --values-file="dont-know-what-to-put-hellosvc.values.yaml" \
+ 		 -o "hellosvc-tmpl-jsonnet/.gen/kubernetes"
 
 kubernetes-special:
-	@$(RNDR) --template=hellosvc-tmpl-jsonnet/hellosvc.tmpl.yaml kubernetes --values=my-special-hellosvc.values.yaml -o hellosvc-tmpl-jsonnet/.gen/kubernetes-special/
+	@mkdir -p hellosvc-tmpl-jsonnet/.gen/kubernetes-special/
+	@$(RNDR) --template-file="hellosvc-tmpl-jsonnet/hellosvc.tmpl.yaml" kubernetes manifests \
+ 		 --values-file="my-special-hellosvc.values.yaml" \
+ 		 -o "hellosvc-tmpl-jsonnet/.gen/kubernetes-special"
