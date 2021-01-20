@@ -1,6 +1,7 @@
 package jsonnet
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -25,14 +26,15 @@ type TemplateRenderer struct {
 var applyAllLocutusJsonnetTmpl = template.Must(template.New("").Parse(`
 local values = import '{{ .LocutusVirtualConfigPath }}';
 
-local groups = []
-local objects = []
-{{- $f range .FunctionFiles }}
-local manifests = (import '{{ $f }}')(values);
+local groups = [
+{{- range .FunctionFiles }}
+local manifests = (import '{{ . }}')(values);
+{{-  end }}
+];
 
-objects+: std.objectFields(manifests)
-groups+: {
-  name: '{{ $f }}'
+
+{
+  name: '{{ . }}',
   steps: [
 	{
 	  action: 'CreateOrUpdate',
@@ -41,11 +43,16 @@ groups+: {
 	for item in std.objectFields(manifests)
   ],
 },
-{{-  end }}
+
+];
+
 
 
 {
-  objects: objects,
+  objects: {
+		
+	for item in std.objectFields(groups)
+  },
   rollout: {
     apiVersion: 'workflow.kubernetes.io/v1alpha1',
     kind: 'Rollout',
@@ -81,7 +88,7 @@ func locutusify(entry string, templName string, functionFiles []string) (err err
 	}
 	defer errcapture.Do(&err, f.Close, "close locutus entry")
 
-	return applyAllLocutusJsonnetTmpl.Execute(f, struct {
+	return applyAllLocutusJsonnetTmpl.Execute(io.MultiWriter(f, os.Stdout), struct {
 		Name                     string
 		LocutusVirtualConfigPath string
 		FunctionFiles            []string
