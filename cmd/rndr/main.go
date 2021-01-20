@@ -12,7 +12,6 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/observatorium/rndr/pkg/version"
 	"github.com/oklog/run"
-	"github.com/openproto/protoconfig/go/kingpinv2"
 	"github.com/pkg/errors"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
@@ -52,7 +51,7 @@ func setupLogger(logLevel, logFormat string) log.Logger {
 type rndrConfig struct {
 	logger log.Logger
 	outDir string
-	tmpl   *kingpinv2.PathOrContent
+	tmpl   string
 }
 
 func main() {
@@ -62,8 +61,9 @@ func main() {
 	logFormat := app.Flag("log.format", "Log format to use.").
 		Default(logFormatCLILog).Enum(logFormatLogfmt, logFormatJSON, logFormatCLILog)
 
-	rc := rndrConfig{}
-	rc.tmpl = kingpinv2.Flag(app, "template", "Template definition YAML as defined in github.com/observatorium/rndr/pkg/rndr.TemplateDefinition").Required().PathOrContent()
+	rc := &rndrConfig{}
+	app.Flag("template", "Path to the YAML file with template definition in github.com/observatorium/rndr/pkg/rndr.TemplateDefinition").
+		Short('t').Required().ExistingFileVar(&rc.tmpl)
 	app.Flag("output", "Directory where to put output files").Short('o').Default("./rndr-out").ExistingDirVar(&rc.outDir)
 
 	var g run.Group

@@ -45,13 +45,15 @@ api:
 #  or
 #  proto:
 #    entry: "Config"
-#    file: "openproto/protoconfig.proto"
+#    message: "openproto/protoconfig.proto"
 #  
 
 # renderer defines the rendering engine.
 renderer:
   jsonnet:
-    entry: hellosvc.libsonnet
+    # function represents a local or absolute path to .jsonnet file with
+    # single `function(values) {` to be an entry point for jsonnet template.
+    function: hellosvc.libsonnet
 #  or
 #  helm:
 #    chart: prometheus

@@ -2,25 +2,45 @@ package rndr
 
 import (
 	"context"
-	"fmt"
+	"io/ioutil"
+	"os"
 
-	"github.com/brancz/locutus/render/jsonnet"
-	"github.com/brancz/locutus/rollout"
+	"github.com/efficientgo/tools/core/pkg/logerrcapture"
 	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 )
 
+type rndr struct {
+	ctx    context.Context
+	logger log.Logger
+	t      TemplateDefinition
+	outDir string
+	values []byte
+
+	tmpDir string
+}
+
 func Render(ctx context.Context, logger log.Logger, t TemplateDefinition, values []byte, outDir string) error {
-	var (
-		typName  string
-		renderer rollout.Renderer
-	)
+	tmpDir, err := ioutil.TempDir(os.TempDir(), "rndr")
+	if err != nil {
+		return err
+	}
+	defer logerrcapture.Do(logger, func() error { return os.RemoveAll(tmpDir) }, "remove tmp dir")
+
+	r := rndr{
+		ctx:    ctx,
+		logger: logger,
+		t:      t,
+		outDir: outDir,
+		tmpDir: tmpDir,
+	}
+
+	// TODO(bwplotka): Parse values & validate through API (!).
 
 	// TODO(bwplotka): Allow passing more parameters (e.g kubernetes options).
 	switch {
 	case t.Renderer.Jsonnet != nil:
-		renderer = jsonnet.NewRenderer(logger, t.Renderer.Jsonnet.Entry, nil)
-		typName = "jsonnet"
+		return r.renderJsonnet(values)
 	case t.Renderer.Helm != nil:
 		return errors.Errorf("helm renderer is not implemented")
 	case t.Renderer.Process != nil:
@@ -28,12 +48,4 @@ func Render(ctx context.Context, logger log.Logger, t TemplateDefinition, values
 	default:
 		return errors.Errorf("no renderer was specified")
 	}
-
-	r, err := renderer.Render(values)
-	if err != nil {
-		return errors.Wrapf(err, "render %v", typName)
-	}
-
-	fmt.Println(r.Objects, r.Rollout)
-	return nil
 }

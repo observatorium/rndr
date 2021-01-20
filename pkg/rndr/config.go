@@ -1,6 +1,9 @@
 package rndr
 
 import (
+	"fmt"
+	"path/filepath"
+
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -20,7 +23,7 @@ type TemplateDefinition struct {
 }
 
 // ParseTemplate parses TemplateDefinition from bytes.
-func ParseTemplate(b []byte) (TemplateDefinition, error) {
+func ParseTemplate(b []byte, tmplDir string) (TemplateDefinition, error) {
 	t := TemplateDefinition{}
 	if err := yaml.Unmarshal(b, &t); err != nil {
 		return TemplateDefinition{}, errors.Wrapf(err, "parsing template content %q", string(b))
@@ -46,6 +49,7 @@ func ParseTemplate(b []byte) (TemplateDefinition, error) {
 		if t.API.Proto.File == "" {
 			return TemplateDefinition{}, errors.New("api.proto.file not specified, but required")
 		}
+		t.API.Proto.File = abs(t.API.Proto.File, tmplDir)
 	default:
 		return TemplateDefinition{}, errors.New("template renderer has to be specified, got none")
 	}
@@ -53,12 +57,26 @@ func ParseTemplate(b []byte) (TemplateDefinition, error) {
 	// TODO(bwplotka): Add validation for renderers.
 	switch {
 	case t.Renderer.Jsonnet != nil:
+		fmt.Println(t.Renderer.Jsonnet.Function)
+		t.Renderer.Jsonnet.Function = abs(t.Renderer.Jsonnet.Function, tmplDir)
 	case t.Renderer.Helm != nil:
 	case t.Renderer.Process != nil:
+		t.Renderer.Process.Command = abs(t.Renderer.Process.Command, tmplDir)
 	default:
 		return TemplateDefinition{}, errors.New("template renderer has to be specified, got none")
 	}
 	return t, nil
+}
+
+func abs(path string, relDir string) string {
+	if relDir == "" {
+		return path
+	}
+
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(relDir, path)
 }
 
 type TemplateAPI struct {
@@ -94,8 +112,8 @@ type TemplateRenderer struct {
 }
 
 type JsonnetTemplateRenderer struct {
-	// Entry represents entry .jsonnet file to be executed.
-	Entry string
+	// Function represents a local or absolute path to .jsonnet file with single `function(values) {` to be an entry point for jsonnet template.
+	Function string
 }
 
 type HelmTemplateRenderer struct {

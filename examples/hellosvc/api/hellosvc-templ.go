@@ -31,12 +31,13 @@ func Default() HelloService {
 }
 
 type HelloService struct {
-	Name             string
-	Namespace        string
-	Version          string
-	Replicas         int
-	Limits           corev1.ResourceRequirements
-	Ports            Ports
+	Name      string
+	Namespace string
+	Version   string
+	Replicas  int
+	Resources corev1.ResourceRequirements
+	Ports     Ports
+	// TODO(bwplotka): With Go we could play in having '+' prefix telling to add values only. Experiment with this.
 	CommonLabels     map[string]string
 	PodLabelSelector map[string]string
 

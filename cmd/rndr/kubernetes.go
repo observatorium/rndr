@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"io/ioutil"
+	"path/filepath"
 
 	"github.com/observatorium/rndr/pkg/rndr"
 	"github.com/oklog/run"
@@ -10,19 +12,23 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 )
 
-func registerKubernetesManifestsCommand(cmd *kingpin.CmdClause, g *run.Group, rc rndrConfig) *kingpin.CmdClause {
+func registerKubernetesManifestsCommand(cmd *kingpin.CmdClause, g *run.Group, rc *rndrConfig) *kingpin.CmdClause {
 	c := cmd.Command("manifests", "Generate Kubernetes manifests")
 	values := kingpinv2.Flag(c, "values", "Values YAML as defined in passed --template api").Required().PathOrContent()
 
 	c.Action(func(_ *kingpin.ParseContext) error {
 		ctx, cancel := context.WithCancel(context.Background())
 		g.Add(func() error {
-			bTmpl, err := rc.tmpl.Content()
+			tmplFile, err := filepath.Abs(rc.tmpl)
 			if err != nil {
-				return err
+				return errors.Wrap(err, "abs")
+			}
+			bTmpl, err := ioutil.ReadFile(tmplFile)
+			if err != nil {
+				return errors.Wrap(err, "read tmpl file")
 			}
 
-			t, err := rndr.ParseTemplate(bTmpl)
+			t, err := rndr.ParseTemplate(bTmpl, filepath.Dir(tmplFile))
 			if err != nil {
 				return err
 			}
@@ -40,7 +46,7 @@ func registerKubernetesManifestsCommand(cmd *kingpin.CmdClause, g *run.Group, rc
 	return c
 }
 
-func registerKubernetesOperatorCommand(cmd *kingpin.CmdClause, g *run.Group, rc rndrConfig) *kingpin.CmdClause {
+func registerKubernetesOperatorCommand(cmd *kingpin.CmdClause, g *run.Group, rc *rndrConfig) *kingpin.CmdClause {
 	c := cmd.Command("operator", "Generate Kubernetes operator")
 
 	// TODO(bwplotka): Allow building all into Go binary? What if files are too large to be part of binary?
@@ -56,7 +62,7 @@ func registerKubernetesOperatorCommand(cmd *kingpin.CmdClause, g *run.Group, rc 
 	return c
 }
 
-func registerKubernetesHelmCommand(cmd *kingpin.CmdClause, g *run.Group, rc rndrConfig) *kingpin.CmdClause {
+func registerKubernetesHelmCommand(cmd *kingpin.CmdClause, g *run.Group, rc *rndrConfig) *kingpin.CmdClause {
 	c := cmd.Command("helm", "Generate Helm operator")
 	c.Action(func(_ *kingpin.ParseContext) error {
 		_, cancel := context.WithCancel(context.Background())
