@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/efficientgo/tools/core/pkg/testutil"
+	"github.com/observatorium/rndr/pkg/rndr/golang"
+	"github.com/observatorium/rndr/pkg/rndr/jsonnet"
 )
 
 func TestParseTemplate(t *testing.T) {
@@ -24,19 +26,21 @@ api:
 # renderer defines the rendering engine.
 renderer:
   jsonnet:
-    function: hellosvc.libsonnet
+    functions: 
+    - hellosvc.libsonnet
+    - second
 `), "")
 		testutil.Ok(t, err)
 		testutil.Equals(t, TemplateDefinition{
 			Name:    "helloservice",
 			Authors: "team@example.com",
 
-			API: TemplateAPI{Go: &GoTemplateAPI{
+			API: TemplateAPI{Go: &golang.TemplateAPI{
 				Default: "github.com/observatorium/rndr/examples/hellosvc/api.Default()",
 				Struct:  "github.com/observatorium/rndr/examples/hellosvc/api.HelloService",
 			}},
 			Renderer: TemplateRenderer{
-				Jsonnet: &JsonnetTemplateRenderer{Function: "hellosvc.libsonnet"},
+				Jsonnet: &jsonnet.TemplateRenderer{Functions: []string{"hellosvc.libsonnet", "second"}},
 			},
 		}, tmpl)
 	})

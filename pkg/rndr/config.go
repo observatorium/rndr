@@ -1,9 +1,10 @@
 package rndr
 
 import (
-	"fmt"
 	"path/filepath"
 
+	"github.com/observatorium/rndr/pkg/rndr/golang"
+	"github.com/observatorium/rndr/pkg/rndr/jsonnet"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -51,14 +52,19 @@ func ParseTemplate(b []byte, tmplDir string) (TemplateDefinition, error) {
 		}
 		t.API.Proto.File = abs(t.API.Proto.File, tmplDir)
 	default:
-		return TemplateDefinition{}, errors.New("template renderer has to be specified, got none")
+		return TemplateDefinition{}, errors.New("template api has to be specified, got none")
 	}
 
 	// TODO(bwplotka): Add validation for renderers.
 	switch {
 	case t.Renderer.Jsonnet != nil:
-		fmt.Println(t.Renderer.Jsonnet.Function)
-		t.Renderer.Jsonnet.Function = abs(t.Renderer.Jsonnet.Function, tmplDir)
+		if len(t.Renderer.Jsonnet.Functions) == 0 {
+			return TemplateDefinition{}, errors.New("jsonnet template renderer has to have at least single function file specified, got none")
+		}
+		for i := range t.Renderer.Jsonnet.Functions {
+			t.Renderer.Jsonnet.Functions[i] = abs(t.Renderer.Jsonnet.Functions[i], tmplDir)
+		}
+
 	case t.Renderer.Helm != nil:
 	case t.Renderer.Process != nil:
 		t.Renderer.Process.Command = abs(t.Renderer.Process.Command, tmplDir)
@@ -81,15 +87,8 @@ func abs(path string, relDir string) string {
 
 type TemplateAPI struct {
 	// One of.
-	Go    *GoTemplateAPI
+	Go    *golang.TemplateAPI
 	Proto *ProtoTemplateAPI
-}
-
-type GoTemplateAPI struct {
-	// Default is a <full package path>.<public function> to be invoked to get valid struct filled in Entry
-	Default string
-	// Struct is a <full package path>.<public struct> name that should be used as the entry point for API struct.
-	Struct string
 }
 
 type ProtoTemplateAPI struct {
@@ -103,17 +102,12 @@ type TemplateRenderer struct {
 	// One of.
 	// Jsonnet allows to configure a renderer that is able to take jsonnet entry point file and input in YAMl and render output files.
 	// `rndr` expects output resources to be rendered in stdout.
-	Jsonnet *JsonnetTemplateRenderer
+	Jsonnet *jsonnet.TemplateRenderer
 	// Helm allows to configure a renderer that is able to take helm chart and input in YAMl and render output files.
 	Helm *HelmTemplateRenderer
 	// Process allows to configure a renderer that is able to execute process with YAMl passed by stdin or envvar and render output files.
 	// `rndr` expects output resources to be rendered in stdout.
 	Process *ProcessTemplateRenderer
-}
-
-type JsonnetTemplateRenderer struct {
-	// Function represents a local or absolute path to .jsonnet file with single `function(values) {` to be an entry point for jsonnet template.
-	Function string
 }
 
 type HelmTemplateRenderer struct {

@@ -51,9 +51,10 @@ api:
 # renderer defines the rendering engine.
 renderer:
   jsonnet:
-    # function represents a local or absolute path to .jsonnet file with
-    # single `function(values) {` to be an entry point for jsonnet template.
-    function: hellosvc.libsonnet
+    # functions represent a local or absolute paths to .jsonnet files with
+    # single `function(values) {` that renders manifests in right order.
+    # Each function's manifests will be part of different groups allowing parallel rollout if requested.
+    functions: [hellosvc.libsonnet]
 #  or
 #  helm:
 #    chart: prometheus
@@ -111,6 +112,6 @@ rndr --template=hellosvc.tmpl.yaml --values=my-special-hellosvc.yaml kubernetes 
 
 ## Credits
 
-* @brancz & [`locutus`](https://github.com/brancz/locutus
+* @brancz & [`locutus`](https://github.com/brancz/locutus)
 * BanzaiCloud for declarative installer inspiration https://banzaicloud.com/blog/declarative-installer/
 
