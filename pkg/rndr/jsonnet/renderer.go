@@ -1,6 +1,7 @@
 package jsonnet
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -111,8 +112,8 @@ func locutusify(entry string, templName string, functionFiles []string) (err err
 }
 
 type Resource struct {
-	Item   string
-	Object []byte
+	Item       string
+	ObjectYAML []byte
 }
 
 func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byte) (groups map[string][]Resource, err error) {
@@ -153,15 +154,15 @@ func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byt
 			split := strings.Split(s.Object, "#")
 
 			// TODO(bwplotka): Most likely we have to stick to JSON output.
-			b, err := yaml.Marshal(res.Objects[s.Object].Object)
-			if err != nil {
+			b := bytes.Buffer{}
+			m := yaml.NewEncoder(&b)
+			m.SetIndent(2)
+
+			if err := m.Encode(res.Objects[s.Object].Object); err != nil {
 				return nil, err
 			}
 
-			ret[g.Name] = append(ret[g.Name], Resource{
-				Item:   split[1],
-				Object: b,
-			})
+			ret[g.Name] = append(ret[g.Name], Resource{Item: split[1], ObjectYAML: b.Bytes()})
 		}
 	}
 	return ret, nil

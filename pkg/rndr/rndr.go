@@ -53,7 +53,7 @@ func Render(ctx context.Context, logger log.Logger, t TemplateDefinition, values
 			return err
 		}
 		for i, r := range resources {
-			if err := ioutil.WriteFile(fmt.Sprintf("%d-%v.yaml", i, r.Item), r.Object, os.ModePerm); err != nil {
+			if err := ioutil.WriteFile(filepath.Join(dir, fmt.Sprintf("%d-%v.yaml", i, r.Item)), r.ObjectYAML, os.ModePerm); err != nil {
 				return err
 			}
 		}
