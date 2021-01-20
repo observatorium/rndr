@@ -2,19 +2,26 @@
 
 **rndr** (*render*): simplify your cloud native system adoption with `rndr` templates! 
 
-`rndr` provides a modern toolkit for creating, using and sharing reusable templates that can be expanded into deployment manifests for systems like Kubernetes and beyond.
-`rndr` can be more or less compared to `helm` (see [the comparison below](#comparisons)).
+`rndr` provides a pluggable generator for creating, using and sharing reusable templates that can be expanded into deployment manifests for systems like Kubernetes and beyond, generated into operator or helm!
+`rndr` can be more or less compared to `helm` - but on steroids (see [the comparison below](#comparisons)).
 
-TODO(bwplotka): If prototype succeeds, move this to separate org (kind of created https://github.com/staterndr)
+TODO(bwplotka): If prototype is generally approved, move this to separate org (kind of created https://github.com/staterndr)
 
 ## Features
 
 * Abstract away classic boilerplate or show example deployment model of your system in an easy, reproducible way you can use on production.
-* Use templating engine of your choice without exposing this detail to the user! Anything that "runs" as definitive OS process is supported. Trust us: **Most likely user don't want to see raw jsonnet** (:
-* Maintain stable easy to use template `values` in either `go` or `proto` allowing easy validation of template values on render time.
+* Use templating engine of your choice without exposing this detail to the user! Anything that "runs" as definitive OS process is supported
+  
+> Trust us: **Most likely user don't want to see raw jsonnet** (:
+
+* Maintain stable and easy to use template `values` in either `go` or `proto` allowing easy validation of template values on render time.
 * Tight integration with charts. Generate `helm` charts from your system's `rndr` template or use chart as `rndr` template itself.
 * You can't escape from `#operator` movement. `rndr` allows to render your deployment state for both GitOps use and operator use. With simple `operator` option instead of raw resources `rndr` will generate you a ready to use operator allowing to reconcile state in runtime.
 * Currently supports Kubernetes only, but can be extended for other orchestator systems using declarative configuration.
+
+## Non-Goals
+
+* Deploying is explicitly a domain of other tools like `kube apply`, `locutus`, `helm` and others.
 
 ## Usage
 
@@ -70,10 +77,10 @@ renderer:
 
 ### Using your template to render desired deployment state 
 
-With the template and value definitions we can use `rndr` to render Kubernetes resources with values we want that are ready to be deployed by your own GitOps pipeline.
+With the template and value definitions we can use `rndr` to render Kubernetes resources with values we want that are ready to be deployed by your own GitOps pipeline or just using `kube apply`!
 
 ```bash
-rndr --template=hellosvc.tmpl.yaml kubernetes --values=my-special-hellosvc.values.yaml 
+rndr -t="hellosvc.tmpl.yaml" kubernetes manifests --values="my-special-hellosvc.values.yaml" -o "./here" 
 ```
 
 Run and see examples:
@@ -81,17 +88,26 @@ Run and see examples:
 * [`make -C examples/hellosvc kubernetes`](examples/hellosvc/Makefile)
 * [`make -C exmaples/hellosvc kubernetes-special`](examples/hellosvc/Makefile)
 
-### Using rndr to generate operator
+### Using rndr to generate operator!
+
+This command will generate Kubernetes resources that use `locutus` project for reconciling your resources from inside the cluster.
 
 ```bash
-rndr --template=hellosvc.tmpl.yaml kubernetes operator
+rndr -t="hellosvc.tmpl.yaml" kubernetes operator -o "./here" 
 ```
 
-### Using rndr to generate helm (!)
+### Using rndr to generate helm chart from your template (!)
+
+There is always the same question for all of the project maintainers. Everyone wants to use helm charts, no one want
+to maintain them. What if you can use your favorite templating tool to generate ... helm chart?
+
+It's as easy as single command:
 
 ```bash
-rndr --template=hellosvc.tmpl.yaml kubernetes helm
+rndr -t="hellosvc.tmpl.yaml" kubernetes helm -o "./here" 
 ```
+
+Make it easy to support helm chart users even if you don't use helm yourself!
 
 ### Using rndr to generate... jsonnet?
 
@@ -99,7 +115,7 @@ So maybe your company loves jsonnet, but you don't. We hear you!
 With `rndr` you can use your own language and generate `jsonnet` package. It's as simple as:
 
 ```bash
-rndr --template=hellosvc.tmpl.yaml --values=my-special-hellosvc.yaml kubernetes jsonnet
+rndr -t="hellosvc.tmpl.yaml" --values="my-special-hellosvc.yaml" kubernetes jsonnet -o "./here" 
 ```
 
 ## Comparisons
@@ -108,6 +124,8 @@ rndr --template=hellosvc.tmpl.yaml --values=my-special-hellosvc.yaml kubernetes 
   
   * `helm` tries to solve both templating and deployment. `rndr` believes in `do one thing and do it well` UNIX philosophy and focuses on templating part only.
   * `rndr` allows to render resources or operator that will operate those resources (thanks to [`locutus`](https://github.com/brancz/locutus) project) 
+  * `rndr` aims to have stable, backward and forward compatible API for your templates (using protobuf). That's hard with helm charts.
+  * `rndr` allows to use more advanced templating then just Go Templating.
   
 
 ## Credits
