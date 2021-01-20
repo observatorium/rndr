@@ -1,10 +1,10 @@
 package jsonnet
 
 import (
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 	"text/template"
 
 	"github.com/brancz/locutus/render/jsonnet"
@@ -14,6 +14,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
+	"gopkg.in/yaml.v3"
 )
 
 type TemplateRenderer struct {
@@ -23,35 +24,22 @@ type TemplateRenderer struct {
 	Functions []string
 }
 
+// TODO(bwplotka): This is bit fuzzy. Potentially we need more control on what is rolled when. Improve.
+// TODO(bwplotka): I assume rollout groups allows paralelism. Check that.
 var applyAllLocutusJsonnetTmpl = template.Must(template.New("").Parse(`
 local values = import '{{ .LocutusVirtualConfigPath }}';
 
-local groups = [
-{{- range .FunctionFiles }}
-local manifests = (import '{{ . }}')(values);
+local groups = {
+{{- range .Groups }}
+  '{{ .Prefix }}': (import '{{ .FunctionFile }}')(values),
 {{-  end }}
-];
-
-
-{
-  name: '{{ . }}',
-  steps: [
-	{
-	  action: 'CreateOrUpdate',
-	  object: item,
-	}
-	for item in std.objectFields(manifests)
-  ],
-},
-
-];
-
-
+};
 
 {
   objects: {
-		
-	for item in std.objectFields(groups)
+		[g + '#' + item]: groups[g]
+		for g in std.objectFields(groups)
+		for item in std.objectFields(groups[g])
   },
   rollout: {
     apiVersion: 'workflow.kubernetes.io/v1alpha1',
@@ -61,7 +49,19 @@ local manifests = (import '{{ . }}')(values);
       name: 'rndr-generated-jsonnet',
     },
     spec: {
-      groups: groups,
+      groups: [
+		{
+		  name: g,
+		  steps: [
+			{
+			  action: 'CreateOrUpdate',
+			  object: g + '#' + item,
+			}
+			for item in std.objectFields(groups[g])
+		  ],
+		},
+		for g in std.objectFields(groups)
+	  ],
     },
   },
 }`))
@@ -88,18 +88,34 @@ func locutusify(entry string, templName string, functionFiles []string) (err err
 	}
 	defer errcapture.Do(&err, f.Close, "close locutus entry")
 
-	return applyAllLocutusJsonnetTmpl.Execute(io.MultiWriter(f, os.Stdout), struct {
+	type group struct {
+		Prefix       string
+		FunctionFile string
+	}
+
+	g := make([]group, 0, len(functionFiles))
+	for _, f := range functionFiles {
+		// TODO(bwplotka): Ensure name clashes are handled.
+		g = append(g, group{FunctionFile: f, Prefix: strings.TrimSuffix(filepath.Base(f), filepath.Ext(filepath.Base(f)))})
+	}
+
+	return applyAllLocutusJsonnetTmpl.Execute(f, struct {
 		Name                     string
 		LocutusVirtualConfigPath string
-		FunctionFiles            []string
+		Groups                   []group
 	}{
 		Name:                     templName,
-		FunctionFiles:            functionFiles,
+		Groups:                   g,
 		LocutusVirtualConfigPath: jsonnet.VirtualConfigPath,
 	})
 }
 
-func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byte) (groups map[string][]string, err error) {
+type Resource struct {
+	Item   string
+	Object []byte
+}
+
+func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byte) (groups map[string][]Resource, err error) {
 	tmpDir, err := ioutil.TempDir(os.TempDir(), "rndr")
 	if err != nil {
 		return nil, err
@@ -107,11 +123,7 @@ func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byt
 	defer logerrcapture.Do(logger, func() error { return os.RemoveAll(tmpDir) }, "remove tmp dir")
 
 	entry := filepath.Join(tmpDir, "main.jsonnet")
-	if err := locutusify(
-		entry,
-		name,
-		c.Functions,
-	); err != nil {
+	if err := locutusify(entry, name, c.Functions); err != nil {
 		return nil, errors.Wrap(err, "locutusify")
 	}
 
@@ -125,7 +137,7 @@ func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byt
 	if res.Rollout == nil || len(res.Rollout.Spec.Groups) == 0 {
 		return nil, errors.Errorf("no rollout resource rendered by locutus entry %v", entry)
 	}
-	ret := make(map[string][]string, len(res.Rollout.Spec.Groups))
+	ret := make(map[string][]Resource, len(res.Rollout.Spec.Groups))
 
 	// We control boilerplate so we expect purely CreateOrUpdate actions.
 	for _, g := range res.Rollout.Spec.Groups {
@@ -133,7 +145,23 @@ func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byt
 			if s.Action != (&rollout.CreateOrUpdateObjectAction{}).Name() {
 				return nil, errors.Errorf("rollout step rendered by locutus has unexpected action %v", s)
 			}
-			ret[g.Name] = append(ret[g.Name], s.Object)
+
+			if _, ok := res.Objects[s.Object]; !ok {
+				return nil, errors.Errorf("rollout step rendered by locutus has object that does not exists %v", s.Object)
+			}
+
+			split := strings.Split(s.Object, "#")
+
+			// TODO(bwplotka): Most likely we have to stick to JSON output.
+			b, err := yaml.Marshal(res.Objects[s.Object].Object)
+			if err != nil {
+				return nil, err
+			}
+
+			ret[g.Name] = append(ret[g.Name], Resource{
+				Item:   split[1],
+				Object: b,
+			})
 		}
 	}
 	return ret, nil

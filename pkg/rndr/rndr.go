@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"github.com/go-kit/kit/log"
 	"github.com/observatorium/rndr/pkg/rndr/jsonnet"
@@ -14,7 +17,7 @@ import (
 func Render(ctx context.Context, logger log.Logger, t TemplateDefinition, values []byte, outDir string) (err error) {
 	// TODO(bwplotka): Parse values & validate through API (!).
 	// TODO(bwplotka): Allow passing more parameters (e.g kubernetes options).
-	var objectGroups map[string][]string
+	var objectGroups map[string][]jsonnet.Resource
 
 	switch {
 	case t.Renderer.Jsonnet != nil:
@@ -40,11 +43,20 @@ func Render(ctx context.Context, logger log.Logger, t TemplateDefinition, values
 	default:
 		return errors.Errorf("no renderer was specified")
 	}
-
 	if err != nil {
 		return err
 	}
-	// TODO: Put into files.
-	fmt.Println(objectGroups)
+
+	for name, resources := range objectGroups {
+		dir := filepath.Join(outDir, name)
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			return err
+		}
+		for i, r := range resources {
+			if err := ioutil.WriteFile(fmt.Sprintf("%d-%v.yaml", i, r.Item), r.Object, os.ModePerm); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
