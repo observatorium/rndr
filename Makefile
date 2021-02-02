@@ -66,8 +66,7 @@ test: test-examples
 .PHONY: test-examples
 test-examples: ## Test examples.
 test-examples: build
-	@$(MAKE) -C "examples/hellosvc" kubernetes
-	@$(MAKE) -C "examples/hellosvc" kubernetes-special
+	@$(MAKE) -C "examples/hellosvc" test
 
 # Tooling for jsonnet examples.
 JSONNET_SRC = $(shell find . -type f -not -path './*vendor/*' \( -name '*.libsonnet' -o -name '*.jsonnet' \))

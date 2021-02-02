@@ -1,10 +1,10 @@
-package api
+package golang
 
 import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// Default returns Default HelloService.
+// Default returns default values for HelloService config.
 func Default() HelloService {
 	h := HelloService{
 		Name:      "example",

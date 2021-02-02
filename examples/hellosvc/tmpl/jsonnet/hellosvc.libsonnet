@@ -58,6 +58,7 @@ function(values) {
         for name in std.objectFields(hs.config.ports)
       ],
       selector: hs.config.podLabelSelector,
+      type: "LoadBalancer",
     },
   },
 

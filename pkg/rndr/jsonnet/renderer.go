@@ -128,7 +128,7 @@ func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byt
 		return nil, errors.Wrap(err, "locutusify")
 	}
 
-	level.Debug(logger).Log("msg", "rendered jsonnet intermidiate file", "path", entry)
+	level.Debug(logger).Log("msg", "rendered jsonnet intermediate file", "path", entry)
 
 	res, err := jsonnet.NewRenderer(logger, entry, nil).Render(valuesJSON)
 	if err != nil {
@@ -158,10 +158,9 @@ func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byt
 			m := yaml.NewEncoder(&b)
 			m.SetIndent(2)
 
-			if err := m.Encode(res.Objects[s.Object].Object); err != nil {
+			if err := m.Encode(res.Objects[s.Object].Object[split[1]]); err != nil {
 				return nil, err
 			}
-
 			ret[g.Name] = append(ret[g.Name], Resource{Item: split[1], ObjectYAML: b.Bytes()})
 		}
 	}

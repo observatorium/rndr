@@ -4,8 +4,8 @@ authors: "team@example.com"
 # api defines the definition of values.
 api:
   go:
-    default: "github.com/observatorium/rndr/examples/hellosvc/api.Default()"
-    struct: "github.com/observatorium/rndr/examples/hellosvc/api.HelloService"
+    default: "github.com/observatorium/rndr/examples/hellosvc/api/go.Default()"
+    struct: "github.com/observatorium/rndr/examples/hellosvc/api/go.HelloService"
 
 # renderer defines the rendering engine.
 renderer:
