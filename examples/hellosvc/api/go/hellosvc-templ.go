@@ -43,8 +43,9 @@ type HelloService struct {
 
 	Message string
 
-	// Extra allows to provide raw bytes in renderer specific language allowing adhoc adjustments right before resources generation
-	// allowing quick adjustments. Use on your own responsibility.
+	// Extra allows to provide raw bytes in renderer specific language allowing adhoc
+	// adjustments right before resources generation allowing quick adjustments.
+	// Use on your own responsibility.
 	Extra []byte
 }
 

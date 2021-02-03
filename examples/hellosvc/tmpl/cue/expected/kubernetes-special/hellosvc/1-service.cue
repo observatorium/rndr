@@ -1,0 +1,29 @@
+package hellosvc
+
+service: "my-special-precious-one": {
+	apiVersion: "v1"
+	kind:       "Service"
+	metadata: {
+		labels: {
+			"app.kubernetes.io/component": "demo"
+			"app.kubernetes.io/instance":  "my-special-precious-one"
+			"app.kubernetes.io/name":      "hellosvc"
+			"app.kubernetes.io/version":   "1.8"
+		}
+		name:      "my-special-precious-one"
+		namespace: "special"
+	}
+	spec: {
+		ports: [{
+			name:       "http"
+			port:       80
+			targetPort: 80
+		}]
+		selector: {
+			"app.kubernetes.io/component": "demo"
+			"app.kubernetes.io/instance":  "my-special-precious-one"
+			"app.kubernetes.io/name":      "hellosvc"
+		}
+		type: "LoadBalancer"
+	}
+}

@@ -29,6 +29,12 @@ $(BINGO): $(BINGO_DIR)/bingo.mod
 	@echo "(re)installing $(GOBIN)/bingo-v0.3.0"
 	@cd $(BINGO_DIR) && $(GO) build -mod=mod -modfile=bingo.mod -o=$(GOBIN)/bingo-v0.3.0 "github.com/bwplotka/bingo"
 
+CUE := $(GOBIN)/cue-v0.2.2
+$(CUE): $(BINGO_DIR)/cue.mod
+	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
+	@echo "(re)installing $(GOBIN)/cue-v0.2.2"
+	@cd $(BINGO_DIR) && $(GO) build -mod=mod -modfile=cue.mod -o=$(GOBIN)/cue-v0.2.2 "cuelang.org/go/cmd/cue"
+
 GOJSONTOYAML := $(GOBIN)/gojsontoyaml-v0.0.0-20200602132005-3697ded27e8c
 $(GOJSONTOYAML): $(BINGO_DIR)/gojsontoyaml.mod
 	@# Install binary/ries using Go 1.14+ build command. This is using bwplotka/bingo-controlled, separate go module with pinned dependencies.
