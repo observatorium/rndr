@@ -2,6 +2,8 @@
 
 **rndr** (*render*): simplify your cloud native system adoption with `rndr` templates! 
 
+> Work in progress: API might change.
+
 `rndr` provides a pluggable generator for creating, using and sharing reusable templates that can be expanded into deployment manifests for systems like Kubernetes and beyond, generated into operator or helm!
 `rndr` can be more or less compared to `helm` - but on steroids (see [the comparison below](#comparisons)).
 
@@ -44,35 +46,53 @@ version: v1
 name: "helloservice"
 authors: "team@example.com"
 
-# api defines the definition of values.
-api:
-  go:
-    default: "github.com/observatorium/rndr/examples/hellosvc/api.Default()"
-    struct: "github.com/observatorium/rndr/examples/hellosvc/api.HelloService"
-#  or
-#  proto:
-#    entry: "Config"
-#    message: "openproto/protoconfig.proto"
-#  
+template:
+  # api defines the definition of values.
+  api:
+    go:
+      default: "github.com/observatorium/rndr/examples/hellosvc/api.Default()"
+      struct: "github.com/observatorium/rndr/examples/hellosvc/api.HelloService"
+  #  or
+  #  proto:
+  #    entry: "Config"
+  #    message: "openproto/protoconfig.proto"
+  #  
+  
+  # renderer defines the rendering engine.
+  renderer:
+    jsonnet:
+      # functions represent a local or absolute paths to .jsonnet files with
+      # single `function(values) {` that renders manifests in right order.
+      # Each function's manifests will be part of different groups allowing parallel rollout if requested.
+      functions: [hellosvc.libsonnet]
+  #  or
+  #  helm:
+  #    chart: prometheus
+  #    repo: 
+  #  or
+  #  process:
+  #    command: "./my-cmd"
+  #    inputEnvVar: "INPUT"
+  #    arguments:
+  #    - "--config=${INPUT}
 
-# renderer defines the rendering engine.
-renderer:
-  jsonnet:
-    # functions represent a local or absolute paths to .jsonnet files with
-    # single `function(values) {` that renders manifests in right order.
-    # Each function's manifests will be part of different groups allowing parallel rollout if requested.
-    functions: [hellosvc.libsonnet]
-#  or
-#  helm:
-#    chart: prometheus
-#    repo: 
-#  or
-#  process:
-#    command: "./my-cmd"
-#    inputEnvVar: "INPUT"
-#    arguments:
-#    - "--config=${INPUT}
-
+packages:
+  <name1>:
+    outputDir: ./olm
+    olm:
+      #...
+  <name2>:
+    outputDir: ./operator
+    kubeOperator:
+      #...
+  <name3>:
+    outputDir: ./helm
+    helm:
+      #...
+  <name4>:
+    outputDir: ./oc
+    openshiftTemplates:
+      #...
 ```
 
 ### Using your template to render desired deployment state 

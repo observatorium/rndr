@@ -1,0 +1,33 @@
+name: "helloservice"
+authors: "team@example.com"
+
+template:
+  # api defines the definition of values.
+  api:
+    go:
+      default: "github.com/observatorium/rndr/examples/hellosvc/api/go.Default()"
+      struct: "github.com/observatorium/rndr/examples/hellosvc/api/go.HelloService"
+
+  # renderer defines the rendering engine.
+  renderer:
+    jsonnet:
+      # functions represents a local or absolute paths to .jsonnet files with
+      # single `function(values) {` that renders manifests in right order.
+      # Each function's manifests will be part of different groups allowing parallel rollout if requested.
+      functions: [hellosvc.libsonnet]
+
+packages:
+  helm:
+    outputDir: .gen/helm
+    helm:
+      tbd:
+
+  olm:
+    outputDir: .gen/olm
+    olm:
+      tbd:
+
+  appsre:
+    outputDir: .gen/appsre
+    openshiftTemplate:
+      values: ../2-my-special-hellosvc.values.yaml

@@ -2,6 +2,7 @@ package jsonnet
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/efficientgo/tools/core/pkg/logerrcapture"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+	"github.com/observatorium/rndr/pkg/rndr/rndrapi"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v3"
 )
@@ -27,6 +29,7 @@ type TemplateRenderer struct {
 
 // TODO(bwplotka): This is bit fuzzy. Potentially we need more control on what is rolled when. Improve.
 // TODO(bwplotka): I assume rollout groups allows paralelism. Check that.
+// See https://github.com/brancz/locutus/issues/38 for more details.
 var applyAllLocutusJsonnetTmpl = template.Must(template.New("").Parse(`
 local values = import '{{ .LocutusVirtualConfigPath }}';
 
@@ -111,12 +114,23 @@ func locutusify(entry string, templName string, functionFiles []string) (err err
 	})
 }
 
-type Resource struct {
-	Item       string
-	ObjectYAML []byte
-}
-
-func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byte) (groups map[string][]Resource, err error) {
+// Render renders objects.
+// TOOD(bplotka): Support Locutus rollouts?
+func Render(logger log.Logger, name string, c TemplateRenderer, valuesYAML []byte) (groups rndrapi.Groups, err error) {
+	// TODO(bwplotka): This is a hack to make sure we only accept YAML.
+	// Use provided definition (requires dynamic invoke of Go).
+	// Something like https://github.com/golang/mock/blob/master/mockgen/mockgen.go#L378.
+	v := make(map[string]interface{})
+	if err := yaml.Unmarshal(valuesYAML, v); err != nil {
+		return nil, err
+	}
+	valuesJSON := []byte("{}")
+	if len(v) > 0 {
+		valuesJSON, err = json.Marshal(v)
+		if err != nil {
+			return nil, err
+		}
+	}
 	tmpDir, err := ioutil.TempDir(os.TempDir(), "rndr")
 	if err != nil {
 		return nil, err
@@ -138,7 +152,7 @@ func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byt
 	if res.Rollout == nil || len(res.Rollout.Spec.Groups) == 0 {
 		return nil, errors.Errorf("no rollout resource rendered by locutus entry %v", entry)
 	}
-	ret := make(map[string][]Resource, len(res.Rollout.Spec.Groups))
+	ret := make(rndrapi.Groups, len(res.Rollout.Spec.Groups))
 
 	// We control boilerplate so we expect purely CreateOrUpdate actions.
 	for _, g := range res.Rollout.Spec.Groups {
@@ -161,7 +175,7 @@ func Render(logger log.Logger, name string, c TemplateRenderer, valuesJSON []byt
 			if err := m.Encode(res.Objects[s.Object].Object[split[1]]); err != nil {
 				return nil, err
 			}
-			ret[g.Name] = append(ret[g.Name], Resource{Item: split[1], ObjectYAML: b.Bytes()})
+			ret[g.Name] = append(ret[g.Name], rndrapi.Resource{Item: split[1], Object: b.Bytes()})
 		}
 	}
 	return ret, nil
