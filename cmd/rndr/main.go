@@ -48,46 +48,33 @@ func setupLogger(logLevel, logFormat string) log.Logger {
 	}
 }
 
-type rndrConfig struct {
-	logger log.Logger
-	outDir string
-	tmpl   string
-}
-
 func main() {
-	app := kingpin.New(filepath.Base(os.Args[0]), `Deployments Template Toolkit.`).Version(version.Version)
+	app := kingpin.New(filepath.Base(os.Args[0]), `Configuration Packaging Toolkit.`).Version(version.Version)
 	logLevel := app.Flag("log.level", "Log filtering level.").
 		Default("info").Enum("error", "warn", "info", "debug")
 	logFormat := app.Flag("log.format", "Log format to use.").
 		Default(logFormatCLILog).Enum(logFormatLogfmt, logFormatJSON, logFormatCLILog)
 
-	rc := &rndrConfig{}
-	app.Flag("template", "Path to the YAML file with template definition in github.com/observatorium/rndr/pkg/rndr.TemplateDefinition").
-		Short('t').Required().ExistingFileVar(&rc.tmpl)
-	app.Flag("output", "Directory where to put output files").Short('o').Default("./rndr-out").ExistingDirVar(&rc.outDir)
-
+	var logger log.Logger
 	var g run.Group
-
-	k := app.Command("kubernetes", "Generate Kubernetes deployment resources")
-	_ = registerKubernetesManifestsCommand(k, &g, rc)
-	_ = registerKubernetesOperatorCommand(k, &g, rc)
-	_ = registerKubernetesHelmCommand(k, &g, rc)
+	registerOutput(app, &g, func() log.Logger { return logger })
+	registerPackage(app, &g, func() log.Logger { return logger })
 
 	cmd, err := app.Parse(os.Args[1:])
 	if err != nil {
 		fmt.Println("parse error:", err)
 		os.Exit(1)
 	}
-	rc.logger = setupLogger(*logLevel, *logFormat)
+	logger = setupLogger(*logLevel, *logFormat)
 
 	g.Add(run.SignalHandler(context.Background(), syscall.SIGINT, syscall.SIGTERM))
 	if err := g.Run(); err != nil {
 		if *logLevel == "debug" {
 			// Use %+v for github.com/pkg/errors error to print with stack.
-			level.Error(rc.logger).Log("err", fmt.Sprintf("%+v", errors.Wrapf(err, "%s command failed", cmd)))
+			level.Error(logger).Log("err", fmt.Sprintf("%+v", errors.Wrapf(err, "%s command failed", cmd)))
 			os.Exit(1)
 		}
-		level.Error(rc.logger).Log("err", errors.Wrapf(err, "%s command failed", cmd))
+		level.Error(logger).Log("err", errors.Wrapf(err, "%s command failed", cmd))
 		os.Exit(1)
 	}
 }
