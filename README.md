@@ -1,13 +1,15 @@
 # rndr
 
-**rndr** (*render*): simplify your cloud native system adoption with `rndr` templates! 
+**rndr** (*render*): Simplify your cloud native system adoption with `rndr` templates! 
 
-> Work in progress: API might change.
+> Work in heavy progress (exeprimental phase): API and implementation might change.
 
 `rndr` provides a pluggable generator for creating, using and sharing reusable templates that can be expanded into deployment manifests for systems like Kubernetes and beyond, generated into operator or helm!
 `rndr` can be more or less compared to `helm` - but on steroids (see [the comparison below](#comparisons)).
 
 TODO(bwplotka): If prototype is generally approved, move this to separate org (kind of created https://github.com/staterndr)
+
+![](./rndr.png)
 
 ## Features
 
