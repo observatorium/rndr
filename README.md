@@ -147,6 +147,7 @@ rndr -t="hellosvc.tmpl.yaml" --values="my-special-hellosvc.yaml" kubernetes json
   * `rndr` aims to have stable, backward and forward compatible API for your templates (using protobuf). That's hard with helm charts.
   * `rndr` allows to use more advanced templating then just Go Templating.
   
+* Helm charts as operator: https://docs.openshift.com/container-platform/4.2/operators/operator_sdk/osdk-helm.html
 
 ## Credits
 
